@@ -13,7 +13,7 @@ from dateutil import tz
 
 DEFAULT_DATA_FOLDER="tmp/repo"
 RECORDS_FILE="records.csv"
-SLEEP_SECS_BET_TICKERS=1
+SLEEP_SECS_BET_TICKERS=2
 
 GH_TOKEN = os.environ.get("GH_TOKEN")
 
@@ -93,20 +93,7 @@ def init_records() -> pd.DataFrame:
     return records
 
 
-def main1():
-    """r0, r1, aapl 1 main1"""
-    records_0 = init_records()
-    aapl = download_ticker('AAPL', records_0)
-    write_records(records_0)
-    records_1 = read_records()
-    return (records_0, records_1, aapl)
-
-
-def push_changes():
-    """Call shell script to push"""
-
-
-async def download_n(n: int = 100):
+async def download_n(n: int = 1000):
     records = read_records()
     loop = asyncio.get_event_loop()
     for _, r in records.sort_values(by='UpdatedAt').head(n).iterrows():
@@ -155,3 +142,20 @@ def pull_changes():
     )
     logger.warning(ret.stderr)
     logger.info(ret.stdout)
+
+def main1():
+    """r0, r1, aapl 1 main1"""
+    records_0 = init_records()
+    aapl = download_ticker('AAPL', records_0)
+    write_records(records_0)
+    records_1 = read_records()
+    return (records_0, records_1, aapl)
+
+
+def main100():
+    asyncio.get_event_loop().run_until_complete(download_n())
+
+
+
+if __name__ == '__main__':
+    main100()

@@ -1,2 +1,2 @@
 # yahoo_findata_downloader
-Scheduled yahoo finance downloader
+Scheduled yahoo finance data downloader
