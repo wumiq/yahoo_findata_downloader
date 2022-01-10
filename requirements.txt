@@ -1,0 +1,5 @@
+structlog
+fastapi
+yfinance
+uvicorn
+uvloop
