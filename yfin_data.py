@@ -13,6 +13,7 @@ from dateutil import tz
 
 DEFAULT_DATA_FOLDER="tmp/repo"
 RECORDS_FILE="records.csv"
+SUMMARY_FILE="summary.csv"
 SLEEP_SECS_BET_TICKERS=2
 
 GH_TOKEN = os.environ.get("GH_TOKEN")
@@ -77,7 +78,10 @@ def write_records(records: pd.DataFrame, data_folder=DEFAULT_DATA_FOLDER):
         return
     records_csv = os.path.join(data_folder, RECORDS_FILE)
     records.to_csv(records_csv, sep='|')
-    logger.info("Updated records to {records_csv}")
+    logger.info(f"Updated records to {records_csv}")
+    summary_csv = os.path.join(data_folder, SUMMARY_FILE)
+    records.groupby('ToDate').size().to_frame(name="Count").to_csv(summary_csv)
+    logger.info(f"Summary written to {summary_csv}")
 
 
 def init_records() -> pd.DataFrame:
@@ -93,7 +97,7 @@ def init_records() -> pd.DataFrame:
     return records
 
 
-async def download_n(n: int = 1000):
+async def download_n(n: int = 100):
     records = read_records()
     loop = asyncio.get_event_loop()
     for _, r in records.sort_values(by='UpdatedAt').head(n).iterrows():
@@ -152,10 +156,10 @@ def main1():
     return (records_0, records_1, aapl)
 
 
-def main100():
-    asyncio.get_event_loop().run_until_complete(download_n())
+def main1000():
+    asyncio.get_event_loop().run_until_complete(download_n(1000))
 
 
 
 if __name__ == '__main__':
-    main100()
+    main1000()

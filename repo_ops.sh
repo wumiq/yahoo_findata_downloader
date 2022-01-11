@@ -26,14 +26,14 @@ function make_clone {
     if [[ -d "$REPO_PATH" ]]; then
         echo "$REPO_PATH exists"
         (
-            cd "$REPO_PATH"
+            cd "$REPO_PATH" || exist
             config_clone
         )
     else
         echo "$REPO_PATH does not exist, making new clone"
         mkdir -p "$REPO_PATH"
         (
-            cd "$REPO_PATH"
+            cd "$REPO_PATH" || exist
             git clone "$REPO_URL" .
             config_clone
         )
@@ -44,7 +44,7 @@ function make_clone {
 function push_changes {
     # assume we are at service root
     (
-        cd "$REPO_PATH"
+        cd "$REPO_PATH" || exit
         if [ -z "$(git status --porcelain)" ]; then 
             echo "Working directory clean, skip commit"
         else
@@ -56,6 +56,20 @@ function push_changes {
     )    
 }
 
+function trucate_history {
+    (
+        cd "$REPO_PATH" || exit
+        c10=$(git rev-parse "main~10")
+        echo "commit of main~10 is $c10"
+        c10p=$(echo "New initial commit, older history has been truncated" | git commit-tree "$c10^{tree}")
+        echo "new parent of c10 is $c10p, replacing $c10 with $c10p"
+        git rebase --onto "$c10p" "$c10"
+        git gc
+        git repack -Adf     # kills in-pack garbage
+        git prune           # kills loose garbage
+    )
+}
+
 
 
 # reset sys var
@@ -65,14 +79,23 @@ OPTIND=1
 output_file=""
 download=0
 upload=0
+truncate=0
 
-while getopts "h?vduf:" opt; do
+while getopts "h?tvduf:" opt; do
   case "$opt" in
     h|\?)
       echo
-      echo "-h show help; -d to download; -u to push local changes; -f <folder> to set folder"
+      echo "./repo_ops.sh"
+      echo "  -h show help"
+      echo "  -t truncate history"
+      echo "  -d to download"
+      echo "  -u to push local changes"
+      echo "  -f <folder> to set folder"
       echo
       exit 0
+      ;;
+    t)
+      truncate=1
       ;;
     v)
       set -x
@@ -97,15 +120,19 @@ REPO_PATH=${output_file:-tmp/repo2}
 
 echo "########## Parse Variables ##########"
 echo "output_file='$output_file'"
+echo "truncate='$truncate'"
 echo "download='$download'"
 echo "upload='$upload'"
 echo "Leftovers: $*"
 echo "REPO_PATH: $REPO_PATH"
 
-if (( $download )); then
+if (( download )); then
+    echo "cloning or pulling changes"
     make_clone
-fi
-
-if (( $upload )); then
+elif (( upload )); then
+    echo "pushing changes"
     push_changes
+elif (( truncate )); then
+    echo "truncating hisotry"
+    trucate_history
 fi
