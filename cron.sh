@@ -14,7 +14,7 @@ export GH_TOKEN
 bash repo_ops.sh -d -f tmp/repo
 
 # truncate history
-bash repo_ops.sh -t -f tmp/repo
+# bash repo_ops.sh -t -f tmp/repo
 
 # fetch yahoo finance data
 source env/bin/activate
