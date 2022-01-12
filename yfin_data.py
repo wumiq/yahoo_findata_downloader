@@ -21,9 +21,8 @@ GH_TOKEN = os.environ.get("GH_TOKEN")
 logger = structlog.get_logger(__name__)
 
 
-def download_ticker(ticker: str, records: pd.DataFrame, data_folder=DEFAULT_DATA_FOLDER):
+def download_ticker(log, ticker: str, records: pd.DataFrame, data_folder=DEFAULT_DATA_FOLDER):
     """Download data to tmp/repo/A/AAPL.csv and return download data, also update records in-place."""
-    log = logger.new(ticker=ticker)
     if records is None or not ticker:
         log.warning(f"Ticker and records must not be null, given ticker: {ticker}")
         return
@@ -100,9 +99,12 @@ def init_records() -> pd.DataFrame:
 async def download_n(n: int = 100):
     records = read_records()
     loop = asyncio.get_event_loop()
-    for _, r in records.sort_values(by='UpdatedAt').head(n).iterrows():
-        await loop.run_in_executor(None, download_ticker, r['Symbol'], records)
+    count = 0
+    for i, r in records.sort_values(by='UpdatedAt').head(n).iterrows():
+        log = logger.new(ticker=r['Symbol'], count=count, idx=i)
+        await loop.run_in_executor(None, download_ticker, log, r['Symbol'], records)
         await asyncio.sleep(SLEEP_SECS_BET_TICKERS)
+        count += 1
     write_records(records)
 
 
@@ -110,9 +112,12 @@ async def download_prefix(s: str):
     records = read_records()
     rsub = records[records['Symbol'].str.startswith(s)]
     loop = asyncio.get_event_loop()
-    for _, r in rsub.sort_values(by='UpdatedAt').iterrows():
-        await loop.run_in_executor(None, download_ticker, r['Symbol'], records)
+    count = 0
+    for i, r in rsub.sort_values(by='UpdatedAt').iterrows():
+        log = logger.new(ticker=r['Symbol'], count=count, idx=i)
+        await loop.run_in_executor(None, download_ticker, log, r['Symbol'], records)
         await asyncio.sleep(SLEEP_SECS_BET_TICKERS)
+        count += 1
     write_records(records)
 
 async def record_summary() -> t.Dict[str, str]:

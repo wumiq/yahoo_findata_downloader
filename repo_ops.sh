@@ -34,7 +34,7 @@ function make_clone {
         mkdir -p "$REPO_PATH"
         (
             cd "$REPO_PATH" || exist
-            git clone "$REPO_URL" .
+            git clone --depth 11 "$REPO_URL" .
             config_clone
         )
     fi
