@@ -34,7 +34,7 @@ function make_clone {
         mkdir -p "$REPO_PATH"
         (
             cd "$REPO_PATH" || exist
-            git clone --depth 11 "$REPO_URL" .
+            git clone --depth 1 "$REPO_URL" .
             config_clone
         )
     fi
@@ -56,17 +56,28 @@ function push_changes {
     )    
 }
 
+# backup main -> backup-$dow
+# create new empty commit and set it as main
 function trucate_history {
     (
         cd "$REPO_PATH" || exit
-        c10=$(git rev-parse "main~10")
-        echo "commit of main~10 is $c10"
-        c10p=$(echo "New initial commit, older history has been truncated" | git commit-tree "$c10^{tree}")
-        echo "new parent of c10 is $c10p, replacing $c10 with $c10p"
-        git rebase --onto "$c10p" "$c10"
-        git gc
-        git repack -Adf     # kills in-pack garbage
-        git prune           # kills loose garbage
+        branch_str="backup-$(date +%u)"
+        git fetch "$REPO_URL" main
+        # fetched commit
+        c_main=$(git ls-remote $REPO_URL refs/heads/main | cut -f1)
+        git push "$REPO_URL" "$c_main:refs/heads/$branch_str" --force
+        # new creation commit
+        msg="New creation commit on $(date +%F), previous main branch moved to $c_main"
+        c0=$(echo $msg | git commit-tree "$c_main^{tree}")
+        echo "---------------------------------------------"
+        echo "Created new commit: $c0"
+        git log -n1 "$c0"
+        git cat-file -p "$c0"
+        echo "---------------------------------------------"
+        # reset and push        
+        git checkout main
+        git reset --hard "$c0"
+        git push "$REPO_URL" main:main --force
     )
 }
 
